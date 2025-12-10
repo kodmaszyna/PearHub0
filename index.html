@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Picklebox-like Hub — Search & Console</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div id="app" class="app">
+    <header class="app-header">
+      <h1 class="app-title">QuickHub</h1>
+      <div class="app-meta">Search + Console</div>
+    </header>
+
+    <main class="main">
+      <!-- Search area -->
+      <section id="searchArea" class="panel">
+        <div class="tabbar">
+          <div id="tabs" class="tabs" role="tablist"></div>
+          <button id="addTabBtn" class="tab-add" title="New Tab">＋</button>
+        </div>
+
+        <div id="tabContent" class="tab-content"></div>
+      </section>
+
+      <!-- Console area -->
+      <section id="consoleArea" class="panel hidden">
+        <h2>Sandboxed Console</h2>
+        <textarea id="consoleInput" placeholder="// Write JS here. console.log outputs appear below" spellcheck="false"></textarea>
+        <div class="console-controls">
+          <button id="consoleRun">Run</button>
+          <button id="consoleClear">Clear</button>
+        </div>
+        <div id="consoleOutput" class="console-output" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <!-- Bottom dock -->
+    <nav class="dock" role="navigation" aria-label="Dock">
+      <button id="btnSearch" class="dock-btn active" title="Search">🔎 Search</button>
+      <button id="btnConsole" class="dock-btn" title="Console">🧪 Console</button>
+    </nav>
+  </div>
+
+  <script type="module" src="assets/app.js"></script>
+</body>
+</html>
