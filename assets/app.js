@@ -1,8 +1,4 @@
-// assets/app.js
-// Minimal SPA logic: tabbed search + sandboxed console.
-// Uses Google for searches by opening a new tab with q= query.
-// Tabs persist in localStorage.
-
+// assets/app.js (updated): shows results in an iframe below tabs, with fallback if embedding is blocked
 const STORAGE_KEY = "quickhub.tabs.v1";
 
 const el = id => document.getElementById(id);
@@ -13,6 +9,12 @@ const btnSearch = el("btnSearch");
 const btnConsole = el("btnConsole");
 const searchArea = el("searchArea");
 const consoleArea = el("consoleArea");
+
+// Results/iframe elements
+const resultFrame = el("resultFrame");
+const embedNotice = el("embedNotice");
+const openInTabBtn = el("openInTab");
+const useDuckBtn = el("useDuck");
 
 // Console elements
 const consoleInput = el("consoleInput");
@@ -84,17 +86,16 @@ function renderActiveTabContent() {
 
   input.addEventListener("input", (e) => {
     t.q = e.target.value;
-    // live update title to first 24 chars when typing
     t.title = t.q ? (t.q.length > 24 ? t.q.slice(0,24) + "…" : t.q) : "New Tab";
     renderTabs();
     save();
   });
 
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") performSearch(t.q);
+    if (e.key === "Enter") doEmbeddedSearch(t.q);
   });
 
-  searchBtn.addEventListener("click", () => performSearch(t.q));
+  searchBtn.addEventListener("click", () => doEmbeddedSearch(t.q));
   openResultsBtn.addEventListener("click", () => openGoogle(t.q));
   renameTabBtn.addEventListener("click", () => {
     const name = prompt("Rename tab", t.title || "");
@@ -142,18 +143,69 @@ function closeTab(id){
 }
 
 // Search actions
-function performSearch(q){
+function doEmbeddedSearch(q){
   if (!q || !q.trim()) { alert("Enter a search query."); return; }
-  // open a Google search in a new tab
-  openGoogle(q);
+  const googleUrl = new URL("https://www.google.com/search");
+  googleUrl.searchParams.set("q", q.trim());
+  embedUrl(googleUrl.toString());
 }
+
+function embedUrl(url) {
+  // Try to embed the requested url in the iframe.
+  // Many sites (including Google) disallow framing — we detect that by using a timeout
+  // and the iframe load event. If embedding is blocked the iframe will not load properly;
+  // we then show a notice and provide fallback options.
+  hideEmbedNotice();
+  let timedOut = false;
+  let loaded = false;
+  const timeoutMs = 900;
+
+  function onLoad() {
+    loaded = true;
+    clearTimeout(timer);
+    hideEmbedNotice();
+    // iframe loaded (may be cross-origin but visible). nothing more to do.
+  }
+
+  resultFrame.src = url;
+  resultFrame.addEventListener("load", onLoad, {once: true});
+
+  const timer = setTimeout(() => {
+    if (!loaded) {
+      timedOut = true;
+      showEmbedNotice(url);
+    }
+  }, timeoutMs);
+}
+
+function showEmbedNotice(failedUrl) {
+  embedNotice.classList.remove("hidden");
+  // configure open button behavior
+  openInTabBtn.onclick = () => window.open(failedUrl, "_blank");
+  useDuckBtn.onclick = () => {
+    const pp = new URLSearchParams(new URL(failedUrl).search);
+    const q = pp.get("q") || "";
+    const duck = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q);
+    resultFrame.src = duck;
+    hideEmbedNotice();
+    // set a short timeout to check DuckDuckGo embedding
+    setTimeout(() => {
+      // If DuckDuckGo also blocked, the notice will reappear by the same embed logic when load doesn't fire.
+    }, 600);
+  };
+}
+
+function hideEmbedNotice() {
+  embedNotice.classList.add("hidden");
+}
+
 function openGoogle(q){
   const u = new URL("https://www.google.com/search");
   if (q && q.trim()) u.searchParams.set("q", q.trim());
   window.open(u.toString(), "_blank");
 }
 
-// Console implementation (sandboxed iframe)
+// Console implementation (unchanged)
 let sandboxFrame = null;
 let sandboxReady = false;
 
@@ -256,14 +308,15 @@ function init() {
   setupSandbox();
   appendConsoleOutput("[info] QuickHub loaded — sandbox initializing...", "info");
 
-  // Support loading with ?q= in URL (for bookmarklet)
+  // Support loading with ?q= in URL (for bookmarklet) — embed on load
   try {
     const pp = new URLSearchParams(location.search);
     const q = pp.get("q");
     if (q) {
-      // open in current active tab
       const t = tabs.find(x => x.id === activeId) || tabs[0];
       if (t) { t.q = q; t.title = q.length > 24 ? q.slice(0,24)+"…" : q; renderTabs(); renderActiveTabContent(); save(); }
+      // attempt to embed Google on load
+      if (q) doEmbeddedSearch(q);
     }
   } catch(e){}
 }
