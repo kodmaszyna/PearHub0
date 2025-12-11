@@ -1,4 +1,6 @@
-// assets/app.js (updated): shows results in an iframe below tabs, with fallback if embedding is blocked
+// assets/app.js (DuckDuckGo embedding)
+// Shows DuckDuckGo HTML results inside the results iframe.
+
 const STORAGE_KEY = "quickhub.tabs.v1";
 
 const el = id => document.getElementById(id);
@@ -14,7 +16,6 @@ const consoleArea = el("consoleArea");
 const resultFrame = el("resultFrame");
 const embedNotice = el("embedNotice");
 const openInTabBtn = el("openInTab");
-const useDuckBtn = el("useDuck");
 
 // Console elements
 const consoleInput = el("consoleInput");
@@ -69,11 +70,11 @@ function renderActiveTabContent() {
   if (!t) { tabContentEl.innerHTML = "<div class='hint'>No tab</div>"; return; }
   tabContentEl.innerHTML = `
     <div class="search-row">
-      <input id="tabSearchInput" type="search" placeholder="Search Google or press Enter" value="${escapeHtml(t.q)}" />
+      <input id="tabSearchInput" type="search" placeholder="Search DuckDuckGo or press Enter" value="${escapeHtml(t.q)}" />
       <button id="tabSearchBtn">Search</button>
     </div>
     <div class="tab-actions">
-      <button id="openResultsBtn">Open Results (Google)</button>
+      <button id="openResultsBtn">Open Results (DuckDuckGo)</button>
       <span class="muted" style="margin-left:8px">Tab: ${escapeHtml(t.title)}</span>
       <button id="renameTabBtn">Rename</button>
     </div>
@@ -96,7 +97,7 @@ function renderActiveTabContent() {
   });
 
   searchBtn.addEventListener("click", () => doEmbeddedSearch(t.q));
-  openResultsBtn.addEventListener("click", () => openGoogle(t.q));
+  openResultsBtn.addEventListener("click", () => openDuck(t.q));
   renameTabBtn.addEventListener("click", () => {
     const name = prompt("Rename tab", t.title || "");
     if (name !== null) {
@@ -142,37 +143,31 @@ function closeTab(id){
   save();
 }
 
-// Search actions
+// Search actions (DuckDuckGo)
 function doEmbeddedSearch(q){
   if (!q || !q.trim()) { alert("Enter a search query."); return; }
-  const googleUrl = new URL("https://www.google.com/search");
-  googleUrl.searchParams.set("q", q.trim());
-  embedUrl(googleUrl.toString());
+  const ddgHtml = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q.trim());
+  embedUrl(ddgHtml);
 }
 
 function embedUrl(url) {
-  // Try to embed the requested url in the iframe.
-  // Many sites (including Google) disallow framing — we detect that by using a timeout
-  // and the iframe load event. If embedding is blocked the iframe will not load properly;
-  // we then show a notice and provide fallback options.
   hideEmbedNotice();
-  let timedOut = false;
   let loaded = false;
-  const timeoutMs = 900;
+  const timeoutMs = 1200;
 
   function onLoad() {
     loaded = true;
     clearTimeout(timer);
     hideEmbedNotice();
-    // iframe loaded (may be cross-origin but visible). nothing more to do.
   }
 
   resultFrame.src = url;
+  // ensure sandbox allows scripts/forms/popups for interactive results
+  // we still keep same-origin protections
   resultFrame.addEventListener("load", onLoad, {once: true});
 
   const timer = setTimeout(() => {
     if (!loaded) {
-      timedOut = true;
       showEmbedNotice(url);
     }
   }, timeoutMs);
@@ -180,27 +175,15 @@ function embedUrl(url) {
 
 function showEmbedNotice(failedUrl) {
   embedNotice.classList.remove("hidden");
-  // configure open button behavior
   openInTabBtn.onclick = () => window.open(failedUrl, "_blank");
-  useDuckBtn.onclick = () => {
-    const pp = new URLSearchParams(new URL(failedUrl).search);
-    const q = pp.get("q") || "";
-    const duck = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q);
-    resultFrame.src = duck;
-    hideEmbedNotice();
-    // set a short timeout to check DuckDuckGo embedding
-    setTimeout(() => {
-      // If DuckDuckGo also blocked, the notice will reappear by the same embed logic when load doesn't fire.
-    }, 600);
-  };
 }
 
 function hideEmbedNotice() {
   embedNotice.classList.add("hidden");
 }
 
-function openGoogle(q){
-  const u = new URL("https://www.google.com/search");
+function openDuck(q){
+  const u = new URL("https://duckduckgo.com/");
   if (q && q.trim()) u.searchParams.set("q", q.trim());
   window.open(u.toString(), "_blank");
 }
@@ -242,82 +225,4 @@ function setupSandbox() {
   </body></html>
   `;
   sandboxFrame.srcdoc = srcdoc;
-  document.body.appendChild(sandboxFrame);
-  window.addEventListener("message", onSandboxMessage);
-}
-
-function onSandboxMessage(ev) {
-  if (!ev.data || !ev.data.type) return;
-  const {type, payload} = ev.data;
-  if (type === "ready") {
-    sandboxReady = true;
-    appendConsoleOutput("[sandbox] ready", "info");
-  } else if (type === "log") appendConsoleOutput(payload, "log");
-  else if (type === "warn") appendConsoleOutput(payload, "warn");
-  else if (type === "error") appendConsoleOutput(payload, "error");
-  else if (type === "result") {
-    if (payload.ok) appendConsoleOutput("[result] " + safeStringify(payload.value), "info");
-    else appendConsoleOutput("[error] " + payload.error, "error");
-  }
-}
-
-function runCode(code) {
-  setupSandbox();
-  if (!sandboxReady) {
-    appendConsoleOutput("[sandbox] initializing — try again in a moment", "info");
-    setTimeout(()=> runCode(code), 200);
-    return;
-  }
-  sandboxFrame.contentWindow.postMessage({type:'runCode', code: code, id: Date.now()}, "*");
-}
-
-function appendConsoleOutput(msg, kind="info") {
-  const d = document.createElement("div");
-  d.className = "out-" + (kind || "info");
-  d.textContent = msg;
-  consoleOutput.appendChild(d);
-  consoleOutput.scrollTop = consoleOutput.scrollHeight;
-}
-function safeStringify(v){ try{return JSON.stringify(v)}catch(e){return String(v)} }
-
-// Hook UI + events
-addTabBtn.addEventListener("click", addTab);
-btnSearch.addEventListener("click", () => {
-  btnSearch.classList.add("active"); btnConsole.classList.remove("active");
-  searchArea.classList.remove("hidden"); consoleArea.classList.add("hidden");
-});
-btnConsole.addEventListener("click", () => {
-  btnConsole.classList.add("active"); btnSearch.classList.remove("active");
-  consoleArea.classList.remove("hidden"); searchArea.classList.add("hidden");
-});
-
-// Console events
-consoleRun.addEventListener("click", () => {
-  const code = consoleInput.value;
-  if(!code.trim()){ appendConsoleOutput("[info] nothing to run", "info"); return; }
-  appendConsoleOutput("> " + code, "info");
-  runCode(code);
-});
-consoleClear.addEventListener("click", () => consoleOutput.innerHTML = "");
-
-// Initialization
-function init() {
-  load();
-  renderTabs();
-  renderActiveTabContent();
-  setupSandbox();
-  appendConsoleOutput("[info] QuickHub loaded — sandbox initializing...", "info");
-
-  // Support loading with ?q= in URL (for bookmarklet) — embed on load
-  try {
-    const pp = new URLSearchParams(location.search);
-    const q = pp.get("q");
-    if (q) {
-      const t = tabs.find(x => x.id === activeId) || tabs[0];
-      if (t) { t.q = q; t.title = q.length > 24 ? q.slice(0,24)+"…" : q; renderTabs(); renderActiveTabContent(); save(); }
-      // attempt to embed Google on load
-      if (q) doEmbeddedSearch(q);
-    }
-  } catch(e){}
-}
-init();
+  document.body.appendChild(s
