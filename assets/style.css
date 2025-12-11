@@ -20,8 +20,8 @@ body{
 
 .app-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px}
 .app-title{font-weight:700;color:var(--accent);margin:0}
-.app-meta{color:var(--muted);font-size:13px}
 
+/* Layout */
 .main{max-width:1100px;margin:8px auto;padding:12px;min-height:70vh;display:flex;flex-direction:column;gap:12px}
 
 .panel{
@@ -51,6 +51,22 @@ body{
 .tab-actions{margin-top:8px;display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
 .tab-actions button{background:transparent;border:1px solid rgba(255,255,255,0.03);padding:6px 8px;border-radius:8px;color:var(--muted);cursor:pointer}
 
+/* Results area (iframe) */
+.results-area{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+#resultFrame{
+  width:100%;
+  height:54vh;
+  border:1px solid rgba(255,255,255,0.03);
+  border-radius:10px;
+  background:white;
+}
+
+/* Embed notice */
+.embed-notice{padding:12px;border-radius:8px;background:rgba(0,0,0,0.45);color:var(--muted);display:flex;flex-direction:column;gap:8px}
+.embed-actions{display:flex;gap:8px}
+.embed-notice button{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);color:#032048;cursor:pointer}
+.embed-hint{font-size:13px;color:var(--muted)}
+
 /* Console */
 #consoleInput{width:100%;height:160px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:#021627;color:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
 .console-controls{display:flex;gap:8px;margin-top:10px}
@@ -75,4 +91,8 @@ body{
   .main{padding:8px}
   .tab{padding:8px 10px;font-size:14px}
   .dock{bottom:12px}
+  #resultFrame{height:46vh}
 }
+
+/* helper */
+.hidden{display:none}
