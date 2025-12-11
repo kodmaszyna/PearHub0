@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>QuickHub</title>
+  <title>QuickHub — Tabbed Search & Console</title>
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
   <div id="app" class="app">
     <header class="app-header">
       <h1 class="app-title">QuickHub</h1>
-      <div class="app-meta">Search + Console</div>
+      <!-- removed app-meta per request -->
     </header>
 
     <main class="main">
@@ -22,6 +22,19 @@
         </div>
 
         <div id="tabContent" class="tab-content"></div>
+
+        <!-- Results area: iframe where search results appear -->
+        <div id="resultsArea" class="results-area">
+          <iframe id="resultFrame" title="Search results"></iframe>
+          <div id="embedNotice" class="embed-notice hidden">
+            <div>Embedding the search results appears to be blocked on this page.</div>
+            <div class="embed-actions">
+              <button id="openInTab">Open results in a new tab</button>
+              <button id="useDuck">Try DuckDuckGo embedded</button>
+            </div>
+            <div class="embed-hint">If you host a proxy or a search API, we can build native in-app results.</div>
+          </div>
+        </div>
       </section>
 
       <!-- Console area -->
